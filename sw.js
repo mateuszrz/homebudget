@@ -1,14 +1,12 @@
-const CACHE = "budzet-v1";
+const CACHE = "budzet-v5";
 const ASSETS = [
-  "/",
-  "/index.html",
-  "/manifest.json",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap"
+  "./",
+  "./index.html",
+  "./manifest.json",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png"
 ];
 
-// Install — cache all assets
 self.addEventListener("install", function(e) {
   e.waitUntil(
     caches.open(CACHE).then(function(cache) {
@@ -19,7 +17,6 @@ self.addEventListener("install", function(e) {
   );
 });
 
-// Activate — clean old caches
 self.addEventListener("activate", function(e) {
   e.waitUntil(
     caches.keys().then(function(keys) {
@@ -33,24 +30,18 @@ self.addEventListener("activate", function(e) {
   );
 });
 
-// Fetch — cache first, then network
+// Network first — always try to get fresh version
 self.addEventListener("fetch", function(e) {
+  if (e.request.method !== "GET") return;
   e.respondWith(
-    caches.match(e.request).then(function(cached) {
-      if (cached) return cached;
-      return fetch(e.request).then(function(response) {
-        if (!response || response.status !== 200 || response.type === "opaque") {
-          return response;
-        }
+    fetch(e.request).then(function(response) {
+      if (response && response.status === 200) {
         var clone = response.clone();
-        caches.open(CACHE).then(function(cache) {
-          cache.put(e.request, clone);
-        });
-        return response;
-      }).catch(function() {
-        // Offline fallback
-        return caches.match("/index.html");
-      });
+        caches.open(CACHE).then(function(cache) { cache.put(e.request, clone); });
+      }
+      return response;
+    }).catch(function() {
+      return caches.match(e.request);
     })
   );
 });
